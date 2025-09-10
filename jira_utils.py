@@ -9,11 +9,17 @@ from jira import JIRA
 
 
 # JIRA Configuration
-JIRA_SERVER = st.secrets["jira_server"]
-JIRA_API_TOKEN = st.secrets["jira_api_token"]
+# JIRA_SERVER = st.secrets["jira_server"]
+# JIRA_API_TOKEN = st.secrets["jira_api_token"]
+
+
+JIRA_SERVER =  "placeholder for JIRA_SERVER"
+JIRA_API_TOKEN = "placeholder for JIRA_API_TOKEN"
+
 
 @st.cache_resource
 def get_jira_client():
+
     """Initialize and return JIRA client"""
     try:
         jira = JIRA(options={'server': JIRA_SERVER}, token_auth=JIRA_API_TOKEN)
@@ -150,8 +156,9 @@ def download_attachment(attachment_id, filename):
 def get_vector_store_mapping():
     """Get the mapping of JIRA projects to vector store IDs"""
     return {
-        "ATSP": "vs_6895b8f030388191aead9091831a1c52",  # Zebra Print
-        "ZSB": "vs_placeholder_for_zsb",  # To be updated
+        "ATSP": ["vs_placeholder_for_ATSP"],  # Zebra Print
+        "ZSB": ["vs_placeholder_for_ZSB"],
+        "EVT": ["vs_placeholder_for_EVT_1","vs_placeholder_for_EVT_2"]  # To be updated
         # Add more projects here as needed
     }
 

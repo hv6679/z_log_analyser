@@ -185,9 +185,9 @@ def convert_to_pdf(uploaded_file):
         return None, None
 
 
-def detect_log_type(content):
+def detect_log_type(content,project):
     """Detect if the log is Windows logs or ADB logs"""
-    if not content or len(content.strip()) == 0:
+    if not content or len(content.strip()) == 0 or project=='EVT':
         return "unknown"
         
     # ADB/Android log indicators - comprehensive patterns

@@ -10,7 +10,10 @@ import traceback
 from openai import OpenAI
 import streamlit_mermaid as stmd
 
-OPENAI_API_KEY = st.secrets["openai_api_key"]
+# OPENAI_API_KEY = st.secrets["openai_api_key"]
+
+OPENAI_API_KEY = "placeholder for OPENAI_API_KEY"
+
 
 # Import our utility modules
 from utils import (
@@ -58,7 +61,7 @@ def setup_sidebar():
 
     if jira_projects:
         # JIRA Project selection
-        project_options = ["Select a project"] + [f"{proj['key']} - {proj['name']}" for proj in jira_projects]
+        project_options = ["Select a project"] + [f"{proj['key']} - {proj['name']}" for proj in jira_projects]+["EVT"]
         selected_jira_project = st.sidebar.selectbox(
             "Select JIRA Project",
             project_options,
@@ -79,7 +82,7 @@ def setup_sidebar():
                 vector_store_id = None
                 tool_supported = False
                 st.sidebar.error(f"This tool is not supported for project **{selected_project_key}**")
-                st.sidebar.warning("⚠️ Please contact the administrator to add vector store support for this project.")
+                st.sidebar.warning("⚠️ Please contact the administrator to add support for this project.")
             
             # Only proceed with bug fetching if tool is supported
             if tool_supported:
@@ -94,10 +97,13 @@ def setup_sidebar():
         bug_description = ""
         attached_file = None
 
-    return bug_description, attached_file, vector_store_id
+    return bug_description, attached_file, vector_store_id,selected_jira_project
 
 
 def handle_bug_selection(selected_project_key):
+    # Handling bug selection for EVT
+    if selected_project_key == "EVT":
+        return "",None
     """Handle bug selection and attachment download"""
     bug_description = ""
     attached_file = None
@@ -258,27 +264,10 @@ def process_files_for_analysis(files_to_analyze, client):
         return [], []
 
 
-def perform_ai_analysis(file_ids, files_to_analyze, bug_description, analysis_prompt, model_name, vector_store_id, client):
+def perform_ai_analysis(file_ids, files_to_analyze, bug_description, analysis_prompt, model_name, vector_store_id, client, project,detected_log_type):
     """Perform AI analysis on the uploaded files"""
     with st.spinner(" Analyzing log file with AI..."):
-        # Determine which file to use for log type detection
-        file_for_detection = files_to_analyze[0][1]  # Use the first file
-        
-        # Detect log type from the file
-        try:
-            content = extract_text_from_file(file_for_detection)
-            if hasattr(file_for_detection, 'seek'):
-                file_for_detection.seek(0)  # Reset file pointer if possible
-            
-            if content:
-                detected_log_type = detect_log_type(content)
-            else:
-                detected_log_type = "unknown"
-                st.warning(" Could not extract text for log type detection, using default analysis")
-        except Exception as e:
-            detected_log_type = "unknown"
-            st.warning(f" Error during log type detection: {str(e)}, using default analysis")
-        
+
         # Get analysis prompt based on detected log type
         analysis_text = get_analysis_prompt(detected_log_type, bug_description, analysis_prompt)
         
@@ -308,7 +297,7 @@ def perform_ai_analysis(file_ids, files_to_analyze, bug_description, analysis_pr
         if vector_store_id is not None:
             response = client.responses.create(
                 model=model_name,
-                tools=[{"type": "file_search", "vector_store_ids": [vector_store_id]}],
+                tools=[{"type": "file_search", "vector_store_ids": vector_store_id}],
                 input=[
                     {
                         "role": "user",
@@ -393,7 +382,7 @@ def main():
     client = get_openai_client()
     
     # Setup sidebar
-    bug_description, attached_file, vector_store_id = setup_sidebar()
+    bug_description, attached_file, vector_store_id, project = setup_sidebar()
     model_name, analysis_prompt = setup_model_configuration()
 
     # Main content area
@@ -427,7 +416,7 @@ def main():
                 if hasattr(primary_file, 'seek'):
                     primary_file.seek(0)
                 if content:
-                    detected_log_type = detect_log_type(content)
+                    detected_log_type = detect_log_type(content,project)
                     # Show log type detection result
                     if detected_log_type == "adb":
                         st.success("🤖 **Detected: ADB Logs**")
@@ -455,7 +444,7 @@ def main():
                 # Perform AI analysis
                 response, detected_log_type = perform_ai_analysis(
                     file_ids, files_to_analyze, bug_description, 
-                    analysis_prompt, model_name, vector_store_id, client
+                    analysis_prompt, model_name, vector_store_id, client, project, detected_log_type
                 )
                 # Display results
                 display_analysis_results(response, detected_log_type, file_ids, client)
