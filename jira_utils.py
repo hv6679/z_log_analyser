@@ -7,12 +7,6 @@ import io
 import streamlit as st
 from jira import JIRA
 
-
-# JIRA Configuration
-# JIRA_SERVER = st.secrets["jira_server"]
-# JIRA_API_TOKEN = st.secrets["jira_api_token"]
-
-
 JIRA_SERVER =  "placeholder for JIRA_SERVER"
 JIRA_API_TOKEN = "placeholder for JIRA_API_TOKEN"
 
