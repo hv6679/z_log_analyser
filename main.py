@@ -7,6 +7,7 @@ import streamlit as st
 import tempfile
 import os
 import traceback
+import httpx
 from openai import OpenAI
 import streamlit_mermaid as stmd
 
@@ -36,8 +37,10 @@ st.markdown("**Upload your log file and get AI-powered analysis with source code
 # Initialize OpenAI client
 @st.cache_resource
 def get_openai_client():
+    http_client = httpx.Client(verify=False)
     return OpenAI(
-        api_key=StreamlitSecretsHelper.get_openai_api_key()
+        api_key=StreamlitSecretsHelper.get_openai_api_key(),
+        http_client=http_client
     )
 
 
