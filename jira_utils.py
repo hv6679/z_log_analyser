@@ -6,17 +6,16 @@ Handles JIRA authentication, project/bug fetching, and attachments
 import io
 import streamlit as st
 from jira import JIRA
-
-JIRA_SERVER =  "placeholder for JIRA_SERVER"
-JIRA_API_TOKEN = "placeholder for JIRA_API_TOKEN"
+from helper import StreamlitSecretsHelper
 
 
 @st.cache_resource
 def get_jira_client():
-
     """Initialize and return JIRA client"""
     try:
-        jira = JIRA(options={'server': JIRA_SERVER}, token_auth=JIRA_API_TOKEN)
+        jira_server = StreamlitSecretsHelper.get_jira_server_url()
+        jira_token = StreamlitSecretsHelper.get_jira_api_token()
+        jira = JIRA(options={'server': jira_server}, token_auth=jira_token)
         return jira
     except Exception as e:
         st.error(f"Failed to connect to JIRA: {str(e)}")
@@ -149,12 +148,18 @@ def download_attachment(attachment_id, filename):
 
 def get_vector_store_mapping():
     """Get the mapping of JIRA projects to vector store IDs"""
-    return {
-        "ATSP": ["vs_placeholder_for_ATSP"],  # Zebra Print
-        "ZSB": ["vs_placeholder_for_ZSB"],
-        "EVT": ["vs_placeholder_for_EVT_1","vs_placeholder_for_EVT_2"]  # To be updated
-        # Add more projects here as needed
-    }
+    try:
+        return {
+            "ATSP": [StreamlitSecretsHelper.get_atsp_vs_id()],  # Zebra Print
+            "EVT": [
+                StreamlitSecretsHelper.get_evt_atf_master_vs_id(),
+                StreamlitSecretsHelper.get_evt_libzebra_master_vs_id()
+            ]  # EVT project with multiple vector stores
+            # Add more projects here as needed
+        }
+    except Exception as e:
+        st.warning(f"Error loading vector store mapping: {str(e)}")
+        return {}
 
 
 def is_project_supported(project_key):

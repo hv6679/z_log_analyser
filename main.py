@@ -10,11 +10,6 @@ import traceback
 from openai import OpenAI
 import streamlit_mermaid as stmd
 
-# OPENAI_API_KEY = st.secrets["openai_api_key"]
-
-OPENAI_API_KEY = "placeholder for OPENAI_API_KEY"
-
-
 # Import our utility modules
 from utils import (
     extract_text_from_file, convert_to_pdf, detect_log_type, 
@@ -24,6 +19,7 @@ from jira_utils import (
     get_jira_projects, get_bugs_from_project, get_bug_description, 
     get_bug_attachments, download_attachment, is_project_supported, get_vector_store_id
 )
+from helper import StreamlitSecretsHelper
 
 
 # Configure Streamlit page
@@ -41,7 +37,7 @@ st.markdown("**Upload your log file and get AI-powered analysis with source code
 @st.cache_resource
 def get_openai_client():
     return OpenAI(
-        api_key=OPENAI_API_KEY
+        api_key=StreamlitSecretsHelper.get_openai_api_key()
     )
 
 
@@ -191,10 +187,22 @@ def setup_model_configuration():
     """Setup model configuration in sidebar"""
     st.sidebar.markdown("---")
     st.sidebar.header("🤖 Model Configuration")
+    
+    # Get default model from secrets, fallback to gpt-4.1 if not available
+    try:
+        default_model = StreamlitSecretsHelper.get_openai_model()
+    except:
+        default_model = "gpt-4.1"
+    
+    available_models = ["gpt-4.1", "gpt-4", "gpt-3.5-turbo"]
+    default_index = 0
+    if default_model in available_models:
+        default_index = available_models.index(default_model)
+    
     model_name = st.sidebar.selectbox(
         " Select Model",
-        ["gpt-4.1", "gpt-4", "gpt-3.5-turbo"],
-        index=0
+        available_models,
+        index=default_index
     )
     # Custom analysis prompt
     default_prompt = "Analyse this log file and give me an error summary"
