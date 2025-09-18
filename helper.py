@@ -42,6 +42,16 @@ class StreamlitSecretsHelper:
     def get_evt_libzebra_master_vs_id() -> str:
         """Get EVT LibZebra master vector store ID from secrets"""
         return StreamlitSecretsHelper.get_secret(EVT_LIBZEBRA_MASTER_VS_ID)
+    
+    @staticmethod
+    def get_atss_vs_id() -> str:
+        """Get ATSS vector store ID from secrets"""
+        return StreamlitSecretsHelper.get_secret(ATSS_VS_ID)
+
+    @staticmethod
+    def get_atss_sdk_vs_id() -> str:
+        """Get ATSS SDK vector store ID from secrets"""
+        return StreamlitSecretsHelper.get_secret(ATSS_SDK_VS_ID)
 
     @staticmethod
     def get_secret(name: str) -> Any:

@@ -187,7 +187,7 @@ def convert_to_pdf(uploaded_file):
 
 def detect_log_type(content,project):
     """Detect if the log is Windows logs or ADB logs"""
-    if not content or len(content.strip()) == 0 or project=='EVT':
+    if not content or len(content.strip()) == 0:
         return "unknown"
         
     # ADB/Android log indicators - comprehensive patterns
@@ -288,7 +288,7 @@ def get_analysis_prompt(detected_log_type, bug_description="", custom_prompt="")
         return "Analyze these log sections with exit status failure and give me the reason for the failure in that sections , and give a small summary of what is happening in every section with appropriate heading without any greetings"
     elif detected_log_type == "adb":
         if bug_description:
-            return f" for the given bug description: {bug_description} Analyze these ADB logs for the application. Identify the error that caused this bug, for these errors go and identify what part of the source code (given in context) which is causing the error and highlight it and try to give a possible fix for this issue."
+            return f" for the given bug description: {bug_description} Analyze these ADB logs for the application if attached. Identify the error that caused this bug, for these errors go and identify what part of the source code (given in context) which is causing the error and highlight it and try to give a possible fix for this issue."
         else:
             return "Analyze these ADB logs for the application. Identify all the errors that were caused and for these errors give me a possible fix "
     else:

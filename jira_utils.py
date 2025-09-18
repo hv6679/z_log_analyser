@@ -150,11 +150,15 @@ def get_vector_store_mapping():
     """Get the mapping of JIRA projects to vector store IDs"""
     try:
         return {
-            "ATSP": [StreamlitSecretsHelper.get_atsp_vs_id()],  # Zebra Print
-            "EVT": [
-                StreamlitSecretsHelper.get_evt_atf_master_vs_id(),
-                StreamlitSecretsHelper.get_evt_libzebra_master_vs_id()
-            ]  # EVT project with multiple vector stores
+            "ATSS": {"vs":[StreamlitSecretsHelper.get_atss_vs_id()],"type":"adb"},  # ATSS project
+            "ATSP": {"vs":[StreamlitSecretsHelper.get_atsp_vs_id()],"type":"adb"},  # Zebra Print
+            "EVT": {
+                "vs":[
+                    StreamlitSecretsHelper.get_evt_atf_master_vs_id(),
+                    StreamlitSecretsHelper.get_evt_libzebra_master_vs_id()
+                ],
+                "type":"unknown"
+            }  # EVT project with multiple vector stores
             # Add more projects here as needed
         }
     except Exception as e:
@@ -171,4 +175,9 @@ def is_project_supported(project_key):
 def get_vector_store_id(project_key):
     """Get vector store ID for a project"""
     vector_store_mapping = get_vector_store_mapping()
-    return vector_store_mapping.get(project_key, None)
+    return vector_store_mapping.get(project_key, None).get("vs", None)
+
+def get_log_type(project_key):
+    """Get log type for a project"""
+    vector_store_mapping = get_vector_store_mapping()
+    return vector_store_mapping.get(project_key, None).get("type", None)

@@ -18,7 +18,7 @@ from utils import (
 )
 from jira_utils import (
     get_jira_projects, get_bugs_from_project, get_bug_description, 
-    get_bug_attachments, download_attachment, is_project_supported, get_vector_store_id
+    get_bug_attachments, download_attachment, get_vector_store_mapping, is_project_supported, get_vector_store_id, get_log_type
 )
 from helper import StreamlitSecretsHelper
 
@@ -53,6 +53,8 @@ def setup_sidebar():
     bug_description = ""
     attached_file = None
     vector_store_id = None
+    project_log_type = None
+
 
     # Fetch JIRA projects
     with st.spinner("🔄 Loading JIRA projects..."):
@@ -75,11 +77,13 @@ def setup_sidebar():
             # Check if project is supported
             if is_project_supported(selected_project_key):
                 vector_store_id = get_vector_store_id(selected_project_key)
+                project_log_type = get_log_type(selected_project_key)
                 st.sidebar.success(f"**{selected_project_key}** is a supported project for this tool!")
                 tool_supported = True
             else:
                 vector_store_id = None
                 tool_supported = False
+                project_log_type = None
                 st.sidebar.error(f"This tool is not supported for project **{selected_project_key}**")
                 st.sidebar.warning("⚠️ Please contact the administrator to add support for this project.")
             
@@ -96,7 +100,7 @@ def setup_sidebar():
         bug_description = ""
         attached_file = None
 
-    return bug_description, attached_file, vector_store_id,selected_jira_project
+    return bug_description, attached_file, vector_store_id,selected_jira_project,project_log_type
 
 
 def handle_bug_selection(selected_project_key):
@@ -327,7 +331,37 @@ def perform_ai_analysis(file_ids, files_to_analyze, bug_description, analysis_pr
                 ]
             )
 
-        return response, detected_log_type
+        return response
+
+def perform_ai_analysis_without_files( bug_description, analysis_prompt, model_name, vector_store_id, client, detected_log_type):
+    """Perform AI analysis on the uploaded files"""
+    with st.spinner(" Analyzing log file with AI..."):
+
+        # Get analysis prompt based on detected log type
+        analysis_text = get_analysis_prompt(detected_log_type, bug_description, analysis_prompt)
+        
+        # Display log type detection result
+        if detected_log_type == "adb":
+            st.success("🤖 Using ADB log analysis mode")
+        elif detected_log_type == "windows":
+            st.success("🪟 Using Windows log analysis mode")
+        else:
+            st.info("🔍 Using general log analysis mode")
+
+        
+        # Create the analysis request
+        if vector_store_id is not None:
+            response = client.responses.create(
+                model=model_name,
+                tools=[{"type": "file_search", "vector_store_ids": vector_store_id}],
+                input=[
+                    {
+                        "role": "user",
+                        "content": analysis_text
+                    }
+                ]
+            )
+        return response
 
 
 def display_analysis_results(response, detected_log_type, file_ids, client):
@@ -393,13 +427,17 @@ def main():
     client = get_openai_client()
     
     # Setup sidebar
-    bug_description, attached_file, vector_store_id, project = setup_sidebar()
+    bug_description, attached_file, vector_store_id, project, project_log_type = setup_sidebar()
     model_name, analysis_prompt = setup_model_configuration()
+
+    detected_log_type = project_log_type
 
     # Main content area
     col1, col2 = st.columns([1, 2])
 
     with col1:
+
+        
 
         st.header("📁 Upload Log File")
         uploaded_file = st.file_uploader(
@@ -426,7 +464,9 @@ def main():
                 content = extract_text_from_file(primary_file)
                 if hasattr(primary_file, 'seek'):
                     primary_file.seek(0)
-                if content:
+                else:
+                    st.warning("⚠️ Could not extract text content for log type detection")
+                if detected_log_type is None:
                     detected_log_type = detect_log_type(content,project)
                     # Show log type detection result
                     if detected_log_type == "adb":
@@ -434,17 +474,19 @@ def main():
                     elif detected_log_type == "windows":
                         st.success("🪟 **Detected: Windows Logs**")
                     else:
-                        st.warning("❓ **Detected: Unknown Log Type**")
-                else:
-                    st.warning("⚠️ Could not extract text content for log type detection")
+                        st.warning("❓ **Detected: Unknown Log Type**") 
             except Exception as e:
                 st.error(f"❌ Error during log type detection: {str(e)}")
 
     with col2:
         st.header("💡 Analysis")
-        if st.button("↪ Analyze Log File", type="secondary", use_container_width=True):
+        if st.button("↪ Analyze Log File/Bug", type="secondary", use_container_width=True):
             if not files_to_analyze:
-                st.error("❌ No files were available for analysis")
+                response = perform_ai_analysis_without_files(
+                    bug_description, analysis_prompt, model_name, vector_store_id, client, detected_log_type
+                )
+                display_analysis_results(response, detected_log_type, None, client)
+
                 return
             # Process files for analysis
             file_ids, temp_file_paths = process_files_for_analysis(files_to_analyze, client)
@@ -453,7 +495,7 @@ def main():
                 return
             try:
                 # Perform AI analysis
-                response, detected_log_type = perform_ai_analysis(
+                response = perform_ai_analysis(
                     file_ids, files_to_analyze, bug_description, 
                     analysis_prompt, model_name, vector_store_id, client, project, detected_log_type
                 )
